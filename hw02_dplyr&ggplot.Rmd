@@ -1,0 +1,200 @@
+---
+title: "Explore Gapminder using dplyer and ggplot"
+output: 
+  html_document:
+    keep_md: true
+---
+
+```{r}
+library(tidyverse)
+library(gapminder)
+```
+
+#### Smell test the data
+
+Let's explore the data frame first:
+```{r database_explore}
+typeof(gapminder)
+class(gapminder)
+```
+
+Gapminder has type: list and class: tbl_df i.e. tibble dataframe
+
+```{r}
+
+ncol(gapminder)
+nrow(gapminder)
+
+```
+
+So, the given dataframe has 6 columns which means 6 variables and 1704 rows or observation.
+
+Size of a dataframe can also be figured out using dim() which gives dimensions of a dataframe. So, nrow() and ncol() can be used in a code where columns and rows need to be used as a parameter for indexing separately.
+
+```{r}
+dim(gapminder)
+```
+
+Data type of each variable:
+
+```{r}
+sapply(gapminder,typeof)
+```
+
+The above output shows that a dataframe can consist of various data types which is the main difference between a dataframe and matrix.
+
+#### Explore individual variable
+
+* Categorical Variable: continent
+
+> For a categorical variable, possible value can be checked using levels().
+
+```{r categorical_variable}
+levels(gapminder$continent)
+summary(gapminder$continent)
+gapminder %>% 
+  select(continent,lifeExp) %>% 
+  ggplot(aes(continent)) + geom_bar()
+```
+
+
+> Above output tells how many data points are there for each continent which can also be represted using barplot.
+
+
+* Quantitative Variable
+
+> The range can be checked using range()(which gives the min-max value of the variable in the dataframe)
+
+```{r quantitative_variable}
+range(gapminder$lifeExp)
+summary(gapminder$lifeExp)
+hist(gapminder$lifeExp)
+```
+
+> So, mean life expectancy is 59.47 but it varies from 23.60 to 82.60 with major observations around 65-75.
+
+
+#### Explore various plot types
+
+Let us explore the scatterplot first.
+
+| Grammar Component     | Specification |
+|-----------------------|---------------|
+| __data__              | `gapminder` |
+| __aesthetic mapping__ | 'x' and 'y' |
+| __geometric object__  | point |
+| scale                 | linear |
+| statistical transform | none |
+| coordinate system     | rectangular |
+| facetting             | none |
+
+I have considered two quantitative variables x = lifeExp and y = gdpPercap
+
+Firstly, let us draw basic scatterplot using these two variables.
+
+```{r scatter_plot}
+a <- ggplot(gapminder,aes(lifeExp,gdpPercap))
+a + geom_point()
+```
+
+As we can see from the graph, the plot is exponential due to skewness of the data . This can be changed to linear trend by using scale() in geom_point or as shown below
+
+```{r}
+a + geom_point() +
+  scale_y_log10()
+```
+
+To understand the trend of data, geom_smooth() function can be used:
+
+```{r}
+a + geom_point() +
+  scale_y_log10() +
+  geom_smooth()
+```
+
+geom_smooth fits a model("gam" in this case) to the given data in consideration. This model can be changed using method argument. The gray area around the line is point-wise confidence which can be switched off using "se = false".
+
+```{r}
+a + geom_point() +
+  scale_y_log10() +
+  geom_smooth(se=FALSE)
+```
+
+We can also color code the graph for different continents:
+
+```{r}
+a + geom_point(aes(color = continent)) +
+  scale_y_log10()
+```
+
+This gives an idea that how the data from different continents is spread.
+
+
+**Density plot**
+
+```{r}
+gapminder %>% 
+  filter(continent=="Europe") %>% 
+  ggplot(aes(lifeExp)) +
+  geom_freqpoly()
+```
+
+Frequency polygon graph shows the count of observations with a certain value of a quantitative variable. For example, there are around 44 observation with lifeExp = 70 in Europe database.
+
+**Jitter Plot**
+
+Lets jump back to categorical and quantitative variable we considered before and dive deep into it.
+
+| Grammar Component     | Specification |
+|-----------------------|---------------|
+| __data__              | `gapminder` |
+| __aesthetic mapping__ | 'x' and 'y' |
+| __geometric object__  | boxplot |
+| scale                 | linear |
+| statistical transform | 5-number summary |
+
+```{r}
+ggplot(gapminder,aes(continent,lifeExp)) +
+  geom_jitter(alpha = 0.5)
+gapminder %>% 
+  group_by(continent) %>%
+  summarise(grp.mean = mean(lifeExp))
+```
+
+As we can see from the data above, average life expectancy in Oceania is the highest but it has very less number of observations.
+
+Lets explore lifeExp for a single continent further.
+
+
+```{r}
+gapminder %>% 
+  filter(continent == "Asia") %>% 
+  ggplot(aes(year,lifeExp)) +
+    geom_line(aes(color = country),show.legend = F)
+```
+
+The above graph shows trend of lifeExp through 1952-2007 for different countries of Asia continent.
+
+We can also filter a few countries to compare their data.
+
+```{r}
+gapminder %>%
+  filter(country %in% c("India", "Afghanistan", "Pakistan","Nepal")) %>%
+  ggplot(aes(year,lifeExp)) +
+  geom_line(aes(group=country,color = country)) +
+  geom_point()
+```
+
+Here, it is clear that Afghanistan has lowest lifeExp. Also, lifeExp in India had a steeper increase from 1952-1977 and then slowed down.
+
+#### Additional Exercise
+
+For the code line given below, analyst did not get the intented result because he used "==" operator instead of %in%. So, the ouput showed Rawanda and Afghanistan data but for alternating years.
+```{r}
+filter(gapminder, country == c("Rwanda", "Afghanistan"))
+```
+
+He should have used the following command:
+```{r}
+filter(gapminder, country %in% c("Rwanda", "Afghanistan"))
+```
